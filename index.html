@@ -606,15 +606,13 @@ html += `<td class="matrix-cell cell-no-data"><span style="color:#ddd;">-</span>
 } else {
 const colorClass = getCellColorClass(cell.cellStatus);
 const display = `${cell.activeCount}/${cell.totalCount}`;
-// Build drug/target names for display
-const drugTargets = cell.activePipelines.slice(0, 3).map(p => {
-const name = p.drug.length > 10 ? p.drug.slice(0, 10) + '…' : p.drug;
-return `${name}(${p.target})`;
-}).join(', ');
-const more = cell.activePipelines.length > 3 ? ` +${cell.activePipelines.length - 3}` : '';
+// Build target names for display (deduplicated)
+const targetSet = [...new Set(cell.activePipelines.map(p => p.target))];
+const targetDisplay = targetSet.slice(0, 4).join(', ');
+const more = targetSet.length > 4 ? ` +${targetSet.length - 4}` : '';
 html += `<td class="matrix-cell ${colorClass}" onclick="openModalCompany('${company.name}','${dc.key}')">`;
 html += `<div class="cell-count">${display}</div>`;
-html += `<div class="cell-sub">${drugTargets}${more}</div>`;
+html += `<div class="cell-sub">${targetDisplay}${more}</div>`;
 html += '</td>';
 }
 }
