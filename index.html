@@ -183,9 +183,6 @@ const DISEASE_COLUMNS = [
 { key: '系统性硬化症', display: '系统性硬化症\nSSc', group: '多通路/自身抗体' },
 { key: '白癜风', display: '白癜风\nVitiligo', group: '其他' },
 { key: '多发性硬化症', display: '多发性硬化症\nMS', group: '其他' },
-{ key: '干燥综合征', display: '干燥综合征\nSjögren', group: '其他' },
-{ key: '视神经脊髓炎', display: '视神经脊髓炎\nNMOSD', group: '其他' },
-{ key: '嗜酸性粒细胞性食管炎', display: '嗜酸性粒细胞性食管炎\nEoE', group: '其他' },
 ];
 const TARGET_GROUPS = [
 {
@@ -219,9 +216,7 @@ const COMPANY_GROUPS = [
 { name: 'MNC Top Pharma', companies: MNC_COMPANIES },
 { name: '中国创新药企', companies: CN_COMPANIES },
 ];
-// Set of predefined disease keys (for rare/other disease aggregation)
-const PREDEFINED_DISEASE_KEYS = new Set(DISEASE_COLUMNS.map(dc => dc.key));
-const PHASE_ORDER = ['批准上市','申请上市','III期临床','II/III期临床','II期临床','I/II期临床','I期临床','申报临床','临床申请','临床前'];
+const PHASE_ORDER = ['批准上市','申请上市','III期临床','II/III期临床','II期临床','I/II期临床','I期临床','申报临床','临床申请'];
 const PHASE_RANK = {};
 PHASE_ORDER.forEach((p, i) => PHASE_RANK[p] = i);
 // ========== STATE ==========
@@ -585,30 +580,21 @@ html += '<tr><th class="row-group-header" style="width:120px;">企业</th>';
 for (const cg of colGroups) {
 html += `<th class="col-group-header" colspan="${cg.cols.length}">${cg.name}</th>`;
 }
-html += '<th class="col-group-header" colspan="1" style="background:#4a4a6e;">罕见病</th>';
 html += '</tr>';
 html += '<tr><th class="row-group-header" style="background:#2a2a4e;"></th>';
 for (const dc of DISEASE_COLUMNS) {
 const lines = dc.display.split('\n');
 html += `<th class="col-disease-header">${lines[0]}<br>${lines.slice(1).join('<br>')}</th>`;
 }
-html += '<th class="col-disease-header" style="background:#4a4a6e;">罕见病<br>Others</th>';
 html += '</tr>';
 html += '</thead><tbody>';
 // Data rows
 for (const cg of companyList) {
-html += `<tr><td class="row-group-header" colspan="${DISEASE_COLUMNS.length + 2}">${cg.group}</td></tr>`;
+html += `<tr><td class="row-group-header" colspan="${DISEASE_COLUMNS.length + 1}">${cg.group}</td></tr>`;
 for (const company of cg.companies) {
 html += '<tr>';
 if (company.hasData) {
-// Count total projects for this company across all diseases (12 predefined)
-let totalProjects = 0;
-for (const dc of DISEASE_COLUMNS) {
-const k = `${company.name}||${dc.key}`;
-if (cellMap[k]) totalProjects += cellMap[k].totalCount;
-}
-const badgeColor = totalProjects >= 20 ? '#E53935' : totalProjects >= 10 ? '#F9A825' : totalProjects >= 5 ? '#42A5F5' : '#888';
-html += `<td class="row-label">${company.name} <span style="font-size:10px;color:${badgeColor};font-weight:700;">[${totalProjects}]</span></td>`;
+html += `<td class="row-label">${company.name}</td>`;
 } else {
 html += `<td class="row-label" style="color:#ccc;">${company.name}</td>`;
 }
@@ -620,71 +606,20 @@ html += `<td class="matrix-cell cell-no-data"><span style="color:#ddd;">-</span>
 } else {
 const colorClass = getCellColorClass(cell.cellStatus);
 const display = `${cell.activeCount}/${cell.totalCount}`;
-// Build target names for display (deduplicated)
-const targetSet = [...new Set(cell.activePipelines.map(p => p.target))];
-const targetDisplay = targetSet.slice(0, 4).join(', ');
-const more = targetSet.length > 4 ? ` +${targetSet.length - 4}` : '';
-html += `<td class="matrix-cell ${colorClass}" onclick="openModalCompany(encodeURIComponent('${company.name}'),'${dc.key}')">`;
+// Build drug/target names for display
+const drugTargets = cell.activePipelines.slice(0, 3).map(p => {
+const name = p.drug.length > 10 ? p.drug.slice(0, 10) + '…' : p.drug;
+return `${name}(${p.target})`;
+}).join(', ');
+const more = cell.activePipelines.length > 3 ? ` +${cell.activePipelines.length - 3}` : '';
+html += `<td class="matrix-cell ${colorClass}" onclick="openModalCompany('${company.name}','${dc.key}')">`;
 html += `<div class="cell-count">${display}</div>`;
-html += `<div class="cell-sub">${targetDisplay}${more}</div>`;
+html += `<div class="cell-sub">${drugTargets}${more}</div>`;
 html += '</td>';
 }
 }
-// === 罕见病列：汇总15主适应症之外的管线 ===
-const rarePipes = rows.filter(r => r.company === company.name && !PREDEFINED_DISEASE_KEYS.has(r.disease));
-if (rarePipes.length > 0) {
-const activeRare = rarePipes.filter(p => p.status !== 'Inactive');
-const rareStatus = activeRare.length > 0
-? getCellStatus(getPhaseMaxPhase(activeRare.map(p => p.phaseGlobal)), getPhaseMaxPhase(activeRare.map(p => p.phaseChina)), false)
-: 'negative';
-const rareColorClass = getCellColorClass(rareStatus);
-const rareTargets = [...new Set(activeRare.map(p => p.target))];
-// Show top diseases instead of targets so user can see what is in the column
-const diseaseNames = [...new Set(activeRare.map(p => p.disease))];
-const rareDiseaseDisplay = diseaseNames.slice(0, 2).join(', ');
-const rareMore = diseaseNames.length > 2 ? ` +${diseaseNames.length - 2}` : '';
-html += `<td class="matrix-cell ${rareColorClass}" onclick="openModalCompanyRare(encodeURIComponent('${company.name}'))">`;
-html += `<div class="cell-count">${activeRare.length}/${rarePipes.length}</div>`;
-html += `<div class="cell-sub">${rareTargetDisplay}${rareMore}</div>`;
-html += '</td>';
-} else {
-html += '<td class="matrix-cell cell-no-data"><span style="color:#ddd;">-</span></td>';
-}
 html += '</tr>';
 }
-}
-// Add target pathway competition summary at bottom
-html += '<tr><td class="row-group-header" colspan="' + (DISEASE_COLUMNS.length + 2) + '" style="background:#1a1a2e;color:#ffd54f;font-size:13px;">🔍 靶点通路·竞争热力</td></tr>';
-for (const tg of TARGET_GROUPS) {
-const pathwayRows = filtered.filter(r => getTargetGroup(r.target) === tg.name);
-if (pathwayRows.length === 0) continue;
-const targetCountPerDisease = {};
-for (const dc of DISEASE_COLUMNS) {
-const diseaseRows = pathwayRows.filter(r => r.disease === dc.key);
-const uniqueTargets = new Set(diseaseRows.map(r => r.target));
-targetCountPerDisease[dc.key] = uniqueTargets.size;
-}
-html += '<tr>';
-html += `<td class="row-label" style="font-size:11px;color:#555;padding:4px 12px;">${tg.name}</td>`;
-for (const dc of DISEASE_COLUMNS) {
-const cnt = targetCountPerDisease[dc.key] || 0;
-let color = '#f5f5f5';
-let textColor = '#bbb';
-if (cnt >= 10) { color = '#E53935'; textColor = '#fff'; }
-else if (cnt >= 5) { color = '#F9A825'; textColor = '#1a1a2e'; }
-else if (cnt >= 1) { color = '#81C784'; textColor = '#1a1a2e'; }
-html += `<td style="background:${color};color:${textColor};text-align:center;font-size:12px;font-weight:600;padding:6px 4px;border:1px solid #e0e0e0;">${cnt > 0 ? cnt : '-'}</td>`;
-}
-// 罕见病列：统计该通路在表外适应症中的靶点数
-const rareTargetsForPathway = new Set(pathwayRows.filter(r => !PREDEFINED_DISEASE_KEYS.has(r.disease)).map(r => r.target));
-const rareCnt = rareTargetsForPathway.size;
-let rareColor = '#f5f5f5';
-let rareTextColor = '#bbb';
-if (rareCnt >= 10) { rareColor = '#E53935'; rareTextColor = '#fff'; }
-else if (rareCnt >= 5) { rareColor = '#F9A825'; rareTextColor = '#1a1a2e'; }
-else if (rareCnt >= 1) { rareColor = '#81C784'; rareTextColor = '#1a1a2e'; }
-html += `<td style="background:${rareColor};color:${rareTextColor};text-align:center;font-size:12px;font-weight:600;padding:6px 4px;border:1px solid #e0e0e0;">${rareCnt > 0 ? rareCnt : '-'}</td>`;
-html += '</tr>';
 }
 html += '</tbody></table></div>';
 container.innerHTML = html;
@@ -776,7 +711,6 @@ modalBody.innerHTML = result.bodyHtml;
 modalOverlay.classList.add('show');
 }
 function openModalCompany(companyName, diseaseName) {
-companyName = decodeURIComponent(companyName);
 const filtered = getFilteredRows(allRows);
 const relevant = filtered.filter(r => (r.company) === companyName && r.disease === diseaseName);
 if (relevant.length === 0) {
@@ -790,56 +724,6 @@ const result = buildModalByTarget(relevant);
 modalTitle.textContent = `${companyName} → ${diseaseName}`;
 modalSub.textContent = result.statusText;
 modalBody.innerHTML = result.bodyHtml;
-modalOverlay.classList.add('show');
-}
-function openModalCompanyRare(companyName) {
-companyName = decodeURIComponent(companyName);
-const filtered = getFilteredRows(allRows);
-const rarePipes = filtered.filter(r => r.company === companyName && !PREDEFINED_DISEASE_KEYS.has(r.disease));
-if (rarePipes.length === 0) {
-modalTitle.textContent = `${companyName} → 罕见病`;
-modalSub.textContent = '无管线记录';
-modalBody.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">该企业无罕见病/其他适应症管线</div>';
-modalOverlay.classList.add('show');
-return;
-}
-// Group by disease
-const byDisease = {};
-for (const p of rarePipes) {
-if (!byDisease[p.disease]) byDisease[p.disease] = [];
-byDisease[p.disease].push(p);
-}
-const sortedDiseases = Object.entries(byDisease).sort((a, b) => b[1].length - a[1].length);
-const activePipes = rarePipes.filter(p => p.status !== 'Inactive');
-let statusText = '';
-if (activePipes.length > 0) {
-const gPhase = getPhaseMaxPhase(activePipes.map(p => p.phaseGlobal));
-const cPhase = getPhaseMaxPhase(activePipes.map(p => p.phaseChina));
-statusText = `共 ${rarePipes.length} 条罕见病/其他适应症管线 | 全球：${gPhase || '无数据'} | 中国：${cPhase || '无数据'}`;
-} else {
-statusText = `共 ${rarePipes.length} 条罕见病/其他适应症管线（已终止）`;
-}
-let bodyHtml = '<div class="pipeline-section">';
-bodyHtml += `<h3 style="font-size:13px;font-weight:600;margin-bottom:8px;color:#1a1a2e;border-bottom:1px solid #eee;padding-bottom:4px;">按适应症归类列表</h3>`;
-for (const [disease, pipes] of sortedDiseases) {
-const active = pipes.filter(p => p.status !== 'Inactive').length;
-const terminated = pipes.filter(p => p.status === 'Inactive').length;
-const targets = [...new Set(pipes.map(p => p.target))].join(', ');
-const globalPhases = pipes.map(p => p.phaseGlobal).filter(p => p);
-const bestPhase = getPhaseMaxPhase(globalPhases);
-const fmt = formatPhaseTag(bestPhase || '');
-bodyHtml += `<div class="pipeline-item">
-<span><strong>${disease}</strong> (${pipes.length}条) <span style="font-size:11px;color:#888;">靶点: ${targets}</span></span>
-<span>${fmt.label ? `<span class="phase-tag ${fmt.cls}">${fmt.label}</span>` : ''}</span>
-</div>`;
-if (terminated > 0) {
-bodyHtml += `<div class="pipeline-subitem" style="color:#E53935;">${terminated}条终止</div>`;
-}
-}
-bodyHtml += '</div>';
-modalTitle.textContent = `${companyName} → 罕见病/其他适应症`;
-modalSub.textContent = statusText;
-modalBody.innerHTML = bodyHtml;
 modalOverlay.classList.add('show');
 }
 // ========== EVENT HANDLERS ==========
