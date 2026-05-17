@@ -183,6 +183,9 @@ const DISEASE_COLUMNS = [
 { key: '系统性硬化症', display: '系统性硬化症\nSSc', group: '多通路/自身抗体' },
 { key: '白癜风', display: '白癜风\nVitiligo', group: '其他' },
 { key: '多发性硬化症', display: '多发性硬化症\nMS', group: '其他' },
+{ key: '干燥综合征', display: '干燥综合征\nSjögren', group: '其他' },
+{ key: '视神经脊髓炎', display: '视神经脊髓炎\nNMOSD', group: '其他' },
+{ key: '嗜酸性粒细胞性食管炎', display: '嗜酸性粒细胞性食管炎\nEoE', group: '其他' },
 ];
 const TARGET_GROUPS = [
 {
@@ -589,7 +592,7 @@ for (const dc of DISEASE_COLUMNS) {
 const lines = dc.display.split('\n');
 html += `<th class="col-disease-header">${lines[0]}<br>${lines.slice(1).join('<br>')}</th>`;
 }
-html += '<th class="col-disease-header" style="background:#4a4a6e;">罕见病<br>Rare Dz</th>';
+html += '<th class="col-disease-header" style="background:#4a4a6e;">罕见病<br>Others</th>';
 html += '</tr>';
 html += '</thead><tbody>';
 // Data rows
@@ -627,7 +630,7 @@ html += `<div class="cell-sub">${targetDisplay}${more}</div>`;
 html += '</td>';
 }
 }
-// === 罕见病列：汇总12主适应症之外的管线 ===
+// === 罕见病列：汇总15主适应症之外的管线 ===
 const rarePipes = rows.filter(r => r.company === company.name && !PREDEFINED_DISEASE_KEYS.has(r.disease));
 if (rarePipes.length > 0) {
 const activeRare = rarePipes.filter(p => p.status !== 'Inactive');
