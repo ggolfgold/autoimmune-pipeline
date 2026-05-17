@@ -582,7 +582,7 @@ html += '<tr><th class="row-group-header" style="width:120px;">企业</th>';
 for (const cg of colGroups) {
 html += `<th class="col-group-header" colspan="${cg.cols.length}">${cg.name}</th>`;
 }
-html += '<th class="col-group-header" colspan="1" style="background:#4a4a6e;">其他</th>';
+html += '<th class="col-group-header" colspan="1" style="background:#4a4a6e;">罕见病</th>';
 html += '</tr>';
 html += '<tr><th class="row-group-header" style="background:#2a2a4e;"></th>';
 for (const dc of DISEASE_COLUMNS) {
@@ -636,8 +636,10 @@ const rareStatus = activeRare.length > 0
 : 'negative';
 const rareColorClass = getCellColorClass(rareStatus);
 const rareTargets = [...new Set(activeRare.map(p => p.target))];
-const rareTargetDisplay = rareTargets.slice(0, 3).join(', ');
-const rareMore = rareTargets.length > 3 ? ` +${rareTargets.length - 3}` : '';
+// Show top diseases instead of targets so user can see what is in the column
+const diseaseNames = [...new Set(activeRare.map(p => p.disease))];
+const rareDiseaseDisplay = diseaseNames.slice(0, 2).join(', ');
+const rareMore = diseaseNames.length > 2 ? ` +${diseaseNames.length - 2}` : '';
 html += `<td class="matrix-cell ${rareColorClass}" onclick="openModalCompanyRare(encodeURIComponent('${company.name}'))">`;
 html += `<div class="cell-count">${activeRare.length}/${rarePipes.length}</div>`;
 html += `<div class="cell-sub">${rareTargetDisplay}${rareMore}</div>`;
