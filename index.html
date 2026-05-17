@@ -216,7 +216,7 @@ const COMPANY_GROUPS = [
 { name: 'MNC Top Pharma', companies: MNC_COMPANIES },
 { name: '中国创新药企', companies: CN_COMPANIES },
 ];
-const PHASE_ORDER = ['批准上市','申请上市','III期临床','II/III期临床','II期临床','I/II期临床','I期临床','申报临床','临床申请'];
+const PHASE_ORDER = ['批准上市','申请上市','III期临床','II/III期临床','II期临床','I/II期临床','I期临床','申报临床','临床申请','临床前'];
 const PHASE_RANK = {};
 PHASE_ORDER.forEach((p, i) => PHASE_RANK[p] = i);
 // ========== STATE ==========
@@ -594,7 +594,14 @@ html += `<tr><td class="row-group-header" colspan="${DISEASE_COLUMNS.length + 1}
 for (const company of cg.companies) {
 html += '<tr>';
 if (company.hasData) {
-html += `<td class="row-label">${company.name}</td>`;
+// Count total projects for this company across all diseases
+let totalProjects = 0;
+for (const dc of DISEASE_COLUMNS) {
+const k = `${company.name}||${dc.key}`;
+if (cellMap[k]) totalProjects += cellMap[k].totalCount;
+}
+const badgeColor = totalProjects >= 20 ? '#E53935' : totalProjects >= 10 ? '#F9A825' : totalProjects >= 5 ? '#42A5F5' : '#888';
+html += `<td class="row-label">${company.name} <span style="font-size:10px;color:${badgeColor};font-weight:700;">[${totalProjects}]</span></td>`;
 } else {
 html += `<td class="row-label" style="color:#ccc;">${company.name}</td>`;
 }
@@ -618,6 +625,30 @@ html += '</td>';
 }
 html += '</tr>';
 }
+}
+// Add target pathway competition summary at bottom
+html += '<tr><td class="row-group-header" colspan="' + (DISEASE_COLUMNS.length + 1) + '" style="background:#1a1a2e;color:#ffd54f;font-size:13px;">🔍 靶点通路·竞争热力</td></tr>';
+for (const tg of TARGET_GROUPS) {
+const pathwayRows = filtered.filter(r => getTargetGroup(r.target) === tg.name);
+if (pathwayRows.length === 0) continue;
+const targetCountPerDisease = {};
+for (const dc of DISEASE_COLUMNS) {
+const diseaseRows = pathwayRows.filter(r => r.disease === dc.key);
+const uniqueTargets = new Set(diseaseRows.map(r => r.target));
+targetCountPerDisease[dc.key] = uniqueTargets.size;
+}
+html += '<tr>';
+html += `<td class="row-label" style="font-size:11px;color:#555;padding:4px 12px;">${tg.name}</td>`;
+for (const dc of DISEASE_COLUMNS) {
+const cnt = targetCountPerDisease[dc.key] || 0;
+let color = '#f5f5f5';
+let textColor = '#bbb';
+if (cnt >= 10) { color = '#E53935'; textColor = '#fff'; }
+else if (cnt >= 5) { color = '#F9A825'; textColor = '#1a1a2e'; }
+else if (cnt >= 1) { color = '#81C784'; textColor = '#1a1a2e'; }
+html += `<td style="background:${color};color:${textColor};text-align:center;font-size:12px;font-weight:600;padding:6px 4px;border:1px solid #e0e0e0;">${cnt > 0 ? cnt : '-'}</td>`;
+}
+html += '</tr>';
 }
 html += '</tbody></table></div>';
 container.innerHTML = html;
