@@ -488,24 +488,6 @@ if (subText) html += `<div class="cell-sub">${subText}</div>`;
 html += '</td>';
 }
 }
-// === 罕见病列：汇总12主适应症之外的管线 ===
-const rarePipes = filtered.filter(r => r.company === company.name && !PREDEFINED_DISEASE_KEYS.has(r.disease));
-if (company.hasData && rarePipes.length > 0) {
-const activeRare = rarePipes.filter(p => p.status !== 'Inactive');
-const rareStatus = activeRare.length > 0
-? getCellStatus(getPhaseMaxPhase(activeRare.map(p => p.phaseGlobal)), getPhaseMaxPhase(activeRare.map(p => p.phaseChina)), false)
-: 'negative';
-const rareColorClass = getCellColorClass(rareStatus);
-const rareTargets = [...new Set(activeRare.map(p => p.target))];
-const rareTargetDisplay = rareTargets.slice(0, 3).join(', ');
-const rareMore = rareTargets.length > 3 ? ` +${rareTargets.length - 3}` : '';
-html += `<td class="matrix-cell ${rareColorClass}" onclick="openModalCompanyRare('${company.name}')">`;
-html += `<div class="cell-count">${activeRare.length}/${rarePipes.length}</div>`;
-html += `<div class="cell-sub">${rareTargetDisplay}${rareMore}</div>`;
-html += '</td>';
-} else {
-html += '<td class="matrix-cell cell-no-data"><span style="color:#ddd;">-</span></td>';
-}
 html += '</tr>';
 }
 }
@@ -639,11 +621,29 @@ const display = `${cell.activeCount}/${cell.totalCount}`;
 const targetSet = [...new Set(cell.activePipelines.map(p => p.target))];
 const targetDisplay = targetSet.slice(0, 4).join(', ');
 const more = targetSet.length > 4 ? ` +${targetSet.length - 4}` : '';
-html += `<td class="matrix-cell ${colorClass}" onclick="openModalCompany('${company.name}','${dc.key}')">`;
+html += `<td class="matrix-cell ${colorClass}" onclick="openModalCompany(encodeURIComponent('${company.name}'),'${dc.key}')">`;
 html += `<div class="cell-count">${display}</div>`;
 html += `<div class="cell-sub">${targetDisplay}${more}</div>`;
 html += '</td>';
 }
+}
+// === 罕见病列：汇总12主适应症之外的管线 ===
+const rarePipes = rows.filter(r => r.company === company.name && !PREDEFINED_DISEASE_KEYS.has(r.disease));
+if (rarePipes.length > 0) {
+const activeRare = rarePipes.filter(p => p.status !== 'Inactive');
+const rareStatus = activeRare.length > 0
+? getCellStatus(getPhaseMaxPhase(activeRare.map(p => p.phaseGlobal)), getPhaseMaxPhase(activeRare.map(p => p.phaseChina)), false)
+: 'negative';
+const rareColorClass = getCellColorClass(rareStatus);
+const rareTargets = [...new Set(activeRare.map(p => p.target))];
+const rareTargetDisplay = rareTargets.slice(0, 3).join(', ');
+const rareMore = rareTargets.length > 3 ? ` +${rareTargets.length - 3}` : '';
+html += `<td class="matrix-cell ${rareColorClass}" onclick="openModalCompanyRare(encodeURIComponent('${company.name}'))">`;
+html += `<div class="cell-count">${activeRare.length}/${rarePipes.length}</div>`;
+html += `<div class="cell-sub">${rareTargetDisplay}${rareMore}</div>`;
+html += '</td>';
+} else {
+html += '<td class="matrix-cell cell-no-data"><span style="color:#ddd;">-</span></td>';
 }
 html += '</tr>';
 }
@@ -771,6 +771,7 @@ modalBody.innerHTML = result.bodyHtml;
 modalOverlay.classList.add('show');
 }
 function openModalCompany(companyName, diseaseName) {
+companyName = decodeURIComponent(companyName);
 const filtered = getFilteredRows(allRows);
 const relevant = filtered.filter(r => (r.company) === companyName && r.disease === diseaseName);
 if (relevant.length === 0) {
@@ -787,6 +788,7 @@ modalBody.innerHTML = result.bodyHtml;
 modalOverlay.classList.add('show');
 }
 function openModalCompanyRare(companyName) {
+companyName = decodeURIComponent(companyName);
 const filtered = getFilteredRows(allRows);
 const rarePipes = filtered.filter(r => r.company === companyName && !PREDEFINED_DISEASE_KEYS.has(r.disease));
 if (rarePipes.length === 0) {
